@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/prisma';
-import shopify, { Session } from '@/lib/shopify';
+// CORRECTED: Import Session and GraphqlClient directly from the main package
+import shopify, { Session, GraphqlClient } from '@shopify/shopify-api';
 import { decrypt } from '@/lib/encryption';
 
 export async function POST(req: NextRequest) {
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
         accessToken: accessToken,
     });
 
-    const client = new shopify.clients.Graphql({ session: shopifySession });
+    // CORRECTED: Instantiate GraphqlClient directly
+    const client = new GraphqlClient({ session: shopifySession });
 
     const response: any = await client.query({
       data: {
