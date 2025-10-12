@@ -20,7 +20,6 @@ export function encrypt(text: string): string {
   return Buffer.concat([iv, encrypted, tag]).toString('hex');
 }
 
-// We will use the decrypt function in the next step
 export function decrypt(encryptedText: string): string {
   const data = Buffer.from(encryptedText, 'hex');
   const iv = data.subarray(0, IV_LENGTH);
