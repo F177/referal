@@ -1,4 +1,4 @@
-// src/app/api/shopify/register-webhook/route.ts
+// The correct location: src/app/api/shopify/register-webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const accessToken = decrypt(brandStore.accessToken);
     const webhookUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/shopify`;
 
+    // Create a new, valid Session instance for the client
     const shopifySession = new Session({
         id: `offline_${brandStore.storeUrl}`,
         shop: brandStore.storeUrl,
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         accessToken: accessToken,
     });
 
-    // CORRECTED: Instantiate GraphqlClient directly
+    // CORRECTED: Instantiate GraphqlClient directly, not via shopify.clients
     const client = new GraphqlClient({ session: shopifySession });
 
     const response: any = await client.query({
