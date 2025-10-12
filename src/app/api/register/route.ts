@@ -1,8 +1,8 @@
-// /app/api/register/route.ts
+// /src/app/api/register/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
-import { UserRole } from '@prisma/client';
+// DO NOT import UserRole from '@prisma/client'
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +11,10 @@ export async function POST(req: Request) {
 
     if (!email || !password || !role) {
       return new NextResponse('Missing fields', { status: 400 });
+    }
+
+    if (role !== 'BRAND' && role !== 'CREATOR') {
+      return new NextResponse('Invalid role specified', { status: 400 });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -25,7 +29,8 @@ export async function POST(req: Request) {
         email,
         name,
         password: hashedPassword,
-        role: role === 'BRAND' ? UserRole.BRAND : UserRole.CREATOR,
+        // Use the string values directly. Prisma understands this.
+        role: role,
       },
     });
 
