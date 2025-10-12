@@ -1,0 +1,74 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CREATOR
+  BRAND
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  name        String?
+  password    String      // Hashed password
+  role        UserRole
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relationships
+  brandStore  BrandStore? // A user with role BRAND can have one store
+  coupons     CouponMap[] // A user with role CREATOR can have many coupons
+}
+
+model BrandStore {
+  id             String   @id @default(cuid())
+  platform       String   // e.g., "SHOPIFY" or "WOOCOMMERCE"
+  storeUrl       String
+  accessToken    String   // IMPORTANT: Encrypt this value before saving!
+  webhookSecret  String   // IMPORTANT: Encrypt this value as well!
+  brandId        String   @unique
+  brand          User     @relation(fields: [brandId], references: [id])
+  
+  // Relationships
+  coupons       CouponMap[]
+  transactions  Transaction[]
+}
+
+model CouponMap {
+  id            String   @id @default(cuid())
+  couponCode    String   @unique
+  commissionRate Decimal  @default(0.10) // e.g., 10%
+  
+  creatorId     String
+  creator       User     @relation(fields: [creatorId], references: [id])
+  
+  brandStoreId  String
+  brandStore    BrandStore @relation(fields: [brandStoreId], references: [id])
+  
+  transactions  Transaction[]
+}
+
+model Transaction {
+  id              String      @id @default(cuid())
+  orderId         String      // The original order ID from the e-commerce platform
+  orderTotal      Decimal     // Total value of the sale
+  commissionAmount Decimal    // Calculated commission for the creator
+  status          String      @default("PENDING") // PENDING -> ELIGIBLE -> PAID
+  createdAt       DateTime    @default(now())
+  payoutDate      DateTime?   // When the payout is scheduled/completed
+  
+  couponMapId     String
+  coupon          CouponMap @relation(fields: [couponMapId], references: [id])
+  
+  brandStoreId    String
+  brandStore      BrandStore @relation(fields: [brandStoreId], references: [id])
+}
