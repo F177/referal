@@ -1,7 +1,16 @@
-// /src/app/brand/dashboard/page.tsx
-import { registerOrderWebhook } from "@/app/actions/shopifyActions";
+// src/app/brand/dashboard/page.tsx
+'use client';
 
 export default function BrandDashboard() {
+
+  // This function now safely calls our new API endpoint
+  const handleRegisterWebhook = async () => {
+    const response = await fetch('/api/shopify/register-webhook', {
+      method: 'POST',
+    });
+    const result = await response.json();
+    alert(result.message); // Show the result to the user
+  };
 
   return (
     <div style={{ padding: '20px' }}>
@@ -9,7 +18,6 @@ export default function BrandDashboard() {
 
       <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', marginTop: '20px' }}>
         <h2>Step 1: Connect Your Store</h2>
-        {/* The form from Phase 2 to connect the store */}
         <form action="/api/shopify/auth" method="get">
           <label htmlFor="shop">Shopify Store URL:&nbsp;</label>
           <input
@@ -26,12 +34,11 @@ export default function BrandDashboard() {
       <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', marginTop: '20px' }}>
         <h2>Step 2: Activate Order Tracking</h2>
         <p>Click the button below to allow our app to track sales and calculate commissions.</p>
-        {/* This form calls our new Server Action */}
-        <form action={registerOrderWebhook}>
+        {/* This form now triggers our client-side fetch function */}
+        <form action={handleRegisterWebhook}>
           <button type="submit">Register Order Webhook</button>
         </form>
       </div>
-
     </div>
   );
 }
