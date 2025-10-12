@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     shop,
     callbackPath: '/api/shopify/callback',
     isOnline: false, // Use offline access token
+    rawRequest: req, // Pass the NextRequest as rawRequest
   });
 
   // Redirect the user to the Shopify authorization screen
