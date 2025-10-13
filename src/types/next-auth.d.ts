@@ -1,12 +1,7 @@
 // /src/types/next-auth.d.ts
 import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
 import { JWT, DefaultJWT } from "next-auth/jwt";
-
-// Define the UserRole enum to be used in our types
-enum UserRole {
-  CREATOR = "CREATOR",
-  BRAND = "BRAND",
-}
+import { UserRole } from "@prisma/client"; // Import UserRole from Prisma
 
 declare module "next-auth/jwt" {
   /**

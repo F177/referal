@@ -9,8 +9,6 @@ const shopify = shopifyApi({
   hostName: new URL(process.env.NEXTAUTH_URL!).hostname,
   apiVersion: ApiVersion.October23,
   isEmbeddedApp: false,
-  // We are removing the sessionStorage property for this library version,
-  // as it handles the temporary OAuth session in memory by default.
 });
 
 export default shopify;
