@@ -15,27 +15,28 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const searchParams = req.nextUrl.searchParams;
-    // The validateHmac utility expects an object version of the search params.
-    const query = Object.fromEntries(searchParams.entries());
+    // This is the key change. We create a mock response object that the
+    // Shopify library's node adapter can work with.
+    const mockResponse: any = {
+      setHeader: (key: string, value: any) => {
+        // In a real Node.js environment, this would set headers.
+        // For our purposes in the Next.js App Router, we can ignore this
+        // as the library only uses it to set cookies, which we handle manually.
+      },
+      getHeaders: () => ({}),
+      end: () => {},
+    };
 
-    // 1. Validate that the request came from Shopify
-    const isValid = await shopify.utils.validateHmac(query);
-    if (!isValid) {
-      return new NextResponse('Authentication failed: Invalid HMAC.', { status: 400 });
-    }
-
-    // 2. Exchange the authorization code for an access token
-    // We use tokenExchange, which does not interact with the Response object.
-    const { session: shopifySession } = await shopify.auth.tokenExchange({
-      shop: query.shop,
-      code: query.code,
+    const callback = await shopify.auth.callback({
+      rawRequest: req as any,
+      rawResponse: mockResponse,
     });
 
+    const shopifySession = callback.session;
     const { shop, accessToken } = shopifySession;
 
     if (!accessToken) {
-        return new NextResponse('Could not retrieve access token from Shopify.', { status: 500 });
+      return new NextResponse('Could not retrieve access token from Shopify.', { status: 500 });
     }
 
     const encryptedAccessToken = encrypt(accessToken);

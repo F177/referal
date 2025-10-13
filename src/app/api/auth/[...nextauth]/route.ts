@@ -1,24 +1,76 @@
-// src/app/api/shopify/auth/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import shopify from '@/lib/shopify';
+// src/app/api/auth/[...nextauth]/route.ts
+import NextAuth, { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import prisma from '@/lib/prisma';
+import bcrypt from 'bcrypt';
+import { User } from '@prisma/client';
 
-export async function GET(req: NextRequest) {
-  const shop = req.nextUrl.searchParams.get('shop');
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: {  label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          return null;
+        }
 
-  if (!shop) {
-    return new NextResponse('Missing shop parameter', { status: 400 });
-  }
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
 
-  // The shopify.auth.begin() call is incompatible with the App Router in this library version.
-  // We will construct the URL manually, which is more reliable.
-  const scopes = process.env.SHOPIFY_SCOPES!;
-  const redirectUri = `${process.env.NEXTAUTH_URL}/api/shopify/callback`;
-  const apiKey = process.env.SHOPIFY_API_KEY!;
-  
-  // In production, this should be a unique, securely generated nonce that you verify in the callback.
-  const state = 'nonce'; 
+        if (!user || !user.password) {
+          return null;
+        }
 
-  const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${apiKey}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&grant_options[]=per-user`;
-  
-  return NextResponse.redirect(authUrl);
-}
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isPasswordValid) {
+          return null;
+        }
+
+        // Return the user object without the password
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      }
+    })
+  ],
+  session: {
+    strategy: 'jwt',
+  },
+  callbacks: {
+    // This callback is called whenever a JWT is created or updated.
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as User).role; // Cast user to include the role
+      }
+      return token;
+    },
+    // This callback is called whenever a session is checked.
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as any; // Add role to the session user
+      }
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/auth/signin', // Optional: your custom sign-in page
+  },
+};
+
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
