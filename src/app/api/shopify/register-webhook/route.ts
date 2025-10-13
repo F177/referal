@@ -1,10 +1,9 @@
-// The correct location: src/app/api/shopify/register-webhook/route.ts
+// src/app/api/shopify/register-webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/prisma';
-// CORRECTED: Import Session and GraphqlClient directly from the main package
-import shopify, { Session, GraphqlClient } from '@shopify/shopify-api';
+import shopify from '@/lib/shopify';
 import { decrypt } from '@/lib/encryption';
 
 export async function POST(req: NextRequest) {
@@ -27,41 +26,47 @@ export async function POST(req: NextRequest) {
     const accessToken = decrypt(brandStore.accessToken);
     const webhookUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/shopify`;
 
-    // Create a new, valid Session instance for the client
-    const shopifySession = new Session({
-        id: `offline_${brandStore.storeUrl}`,
-        shop: brandStore.storeUrl,
-        state: 'placeholder',
-        isOnline: false,
-        accessToken: accessToken,
-    });
+    // Create a session object compatible with the Shopify API
+    const sessionData = shopify.session.customAppSession(brandStore.storeUrl);
+    sessionData.accessToken = accessToken;
 
-    // CORRECTED: Instantiate GraphqlClient directly, not via shopify.clients
-    const client = new GraphqlClient({ session: shopifySession });
+    // Create a GraphQL client using the new API
+    const client = new shopify.clients.Graphql({ session: sessionData });
 
-    const response: any = await client.query({
-      data: {
-        query: `mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
-          webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
-            userErrors { field message }
-            webhookSubscription { id }
-          }
-        }`,
+    const response: any = await client.request(
+      `mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+          userErrors { field message }
+          webhookSubscription { id }
+        }
+      }`,
+      {
         variables: {
           topic: "ORDERS_PAID",
-          webhookSubscription: { callbackUrl: webhookUrl, format: "JSON" }
+          webhookSubscription: { 
+            callbackUrl: webhookUrl, 
+            format: "JSON" 
+          }
         }
       }
-    });
+    );
 
-    if (response.body.data.webhookSubscriptionCreate.userErrors.length > 0) {
-      throw new Error(response.body.data.webhookSubscriptionCreate.userErrors[0].message);
+    const result = response.data;
+
+    if (result?.webhookSubscriptionCreate?.userErrors?.length > 0) {
+      throw new Error(result.webhookSubscriptionCreate.userErrors[0].message);
     }
 
-    return NextResponse.json({ success: true, message: 'Webhook registered successfully!' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Webhook registered successfully!' 
+    });
 
   } catch (error: any) {
     console.error('Failed to register webhook:', error);
-    return NextResponse.json({ success: false, message: error.message || 'Failed to register webhook.' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message || 'Failed to register webhook.' 
+    }, { status: 500 });
   }
 }
