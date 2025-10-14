@@ -7,8 +7,10 @@ const shopify = shopifyApi({
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   scopes: process.env.SHOPIFY_SCOPES!.split(','),
   hostName: new URL(process.env.NEXTAUTH_URL!).hostname,
-  apiVersion: ApiVersion.October23,
-  isEmbeddedApp: false,
+  hostScheme: 'https',
+  apiVersion: ApiVersion.October25,
+  isEmbeddedApp: false, // ← IMPORTANTE! Seu app NÃO é embedado
+  isCustomStoreApp: false,
 });
 
 export default shopify;

@@ -3,64 +3,92 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/prisma';
-import shopify from '@/lib/shopify';
 import { encrypt } from '@/lib/encryption';
+import crypto from 'crypto';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
 
   if (!userId || (session?.user as any).role !== 'BRAND') {
-    return new NextResponse('Unauthorized: You must be logged in as a BRAND.', { status: 401 });
+    return new NextResponse('Unauthorized: Login as BRAND first', { status: 401 });
   }
 
-  try {
-    // This is the key change. We create a mock response object that the
-    // Shopify library's node adapter can work with.
-    const mockResponse: any = {
-      setHeader: (key: string, value: any) => {
-        // In a real Node.js environment, this would set headers.
-        // For our purposes in the Next.js App Router, we can ignore this
-        // as the library only uses it to set cookies, which we handle manually.
-      },
-      getHeaders: () => ({}),
-      end: () => {},
-    };
+  const { searchParams } = req.nextUrl;
+  const code = searchParams.get('code');
+  const shop = searchParams.get('shop');
+  const hmac = searchParams.get('hmac');
+  const state = searchParams.get('state');
 
-    const callback = await shopify.auth.callback({
-      rawRequest: req as any,
-      rawResponse: mockResponse,
+  if (!code || !shop || !hmac) {
+    return new NextResponse('Missing parameters', { status: 400 });
+  }
+
+  // 1. Validar HMAC
+  const params: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    if (key !== 'hmac') params[key] = value;
+  });
+
+  const message = Object.keys(params)
+    .sort()
+    .map(key => `${key}=${params[key]}`)
+    .join('&');
+
+  const generatedHash = crypto
+    .createHmac('sha256', process.env.SHOPIFY_API_SECRET!)
+    .update(message)
+    .digest('hex');
+
+  if (generatedHash !== hmac) {
+    return new NextResponse('HMAC validation failed', { status: 403 });
+  }
+
+  // 2. Trocar code por access_token
+  try {
+    const tokenUrl = `https://${shop}/admin/oauth/access_token`;
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: process.env.SHOPIFY_API_KEY!,
+        client_secret: process.env.SHOPIFY_API_SECRET!,
+        code,
+      }),
     });
 
-    const shopifySession = callback.session;
-    const { shop, accessToken } = shopifySession;
-
-    if (!accessToken) {
-      return new NextResponse('Could not retrieve access token from Shopify.', { status: 500 });
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`Token exchange failed: ${errorText}`);
     }
 
-    const encryptedAccessToken = encrypt(accessToken);
+    const { access_token } = await tokenResponse.json();
+
+    // 3. Salvar no banco de dados
+    const encryptedToken = encrypt(access_token);
 
     await prisma.brandStore.upsert({
       where: { brandId: userId },
       update: {
         storeUrl: shop,
-        accessToken: encryptedAccessToken,
+        accessToken: encryptedToken,
       },
       create: {
         brandId: userId,
-        storeUrl: shop,
-        accessToken: encryptedAccessToken,
         platform: 'SHOPIFY',
-        webhookSecret: '', // Placeholder
+        storeUrl: shop,
+        accessToken: encryptedToken,
+        webhookSecret: '',
       },
     });
 
-    const redirectUrl = new URL('/brand/dashboard', req.url);
-    return NextResponse.redirect(redirectUrl.toString());
+    // 4. Redirecionar para o dashboard
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/brand/dashboard?success=true`);
 
   } catch (error: any) {
-    console.error('Shopify callback error:', error);
-    return new NextResponse(`Authentication failed: ${error.message}. Please try connecting your store again.`, { status: 500 });
+    console.error('OAuth error:', error);
+    return NextResponse.redirect(
+      `${process.env.NEXTAUTH_URL}/brand/dashboard?error=${encodeURIComponent(error.message)}`
+    );
   }
 }
