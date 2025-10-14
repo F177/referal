@@ -1,194 +1,255 @@
-// src/app/brand/dashboard/page.tsx
+// src/app/auth/register/page.tsx
 'use client';
 
-import { useSession, signIn } from 'next-auth/react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-export default function BrandDashboard() {
-  const { data: session, status } = useSession();
+export default function Register() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [message, setMessage] = useState('');
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    name: '',
+    password: '',
+    confirmPassword: '',
+    role: 'CREATOR',
+  });
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirecionar para login se não estiver autenticado
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin?callbackUrl=/brand/dashboard');
-    }
-  }, [status, router]);
-
-  // Verificar se é BRAND
-  useEffect(() => {
-    if (session?.user && (session.user as any).role !== 'BRAND') {
-      setMessage('❌ Access denied. Only BRAND users can access this page.');
-    }
-  }, [session]);
-
-  // Mostrar mensagens de sucesso/erro do OAuth
-  useEffect(() => {
-    if (searchParams.get('success')) {
-      setMessage('✅ Store connected successfully!');
-    }
-    if (searchParams.get('error')) {
-      setMessage(`❌ Error: ${searchParams.get('error')}`);
-    }
-  }, [searchParams]);
-
-  const handleRegisterWebhook = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch('/api/shopify/register-webhook', {
+      const response = await fetch('/api/register', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          role: formData.role,
+        }),
       });
-      const result = await response.json();
-      setMessage(result.message);
+
+      if (response.ok) {
+        alert('✅ Cadastro realizado com sucesso! Faça login.');
+        router.push('/auth/signin');
+      } else {
+        const text = await response.text();
+        setError(text || 'Falha no cadastro');
+      }
     } catch (error) {
-      setMessage('❌ Failed to register webhook.');
+      setError('Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Mostrar loading enquanto verifica autenticação
-  if (status === 'loading') {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
-      }}>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  // Mostrar erro se não for BRAND
-  if (session?.user && (session.user as any).role !== 'BRAND') {
-    return (
-      <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1>Access Denied</h1>
-        <p>Only BRAND users can access this page.</p>
-        <button onClick={() => router.push('/')}>Go Home</button>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '30px'
-      }}>
-        <h1>Brand Dashboard</h1>
-        <div>
-          <span style={{ marginRight: '15px' }}>
-            Welcome, {session?.user?.name || session?.user?.email}
-          </span>
-          <button 
-            onClick={() => router.push('/api/auth/signout')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {message && (
-        <div style={{
-          padding: '15px',
-          marginBottom: '20px',
-          borderRadius: '5px',
-          backgroundColor: message.includes('✅') ? '#d4edda' : '#f8d7da',
-          border: `1px solid ${message.includes('✅') ? '#c3e6cb' : '#f5c6cb'}`,
-          color: message.includes('✅') ? '#155724' : '#721c24',
-        }}>
-          {message}
-        </div>
-      )}
-
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      backgroundColor: '#f5f5f5',
+      padding: '20px',
+    }}>
       <div style={{
-        border: '1px solid #ccc',
-        padding: '30px',
+        backgroundColor: 'white',
+        padding: '40px',
         borderRadius: '8px',
-        marginBottom: '20px',
-        backgroundColor: '#f8f9fa',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        width: '100%',
+        maxWidth: '450px',
       }}>
-        <h2>🔗 Step 1: Connect Your Shopify Store</h2>
-        <p style={{ marginBottom: '20px', color: '#666' }}>
-          Enter your Shopify store URL to connect it to the platform.
+        <h1 style={{ marginBottom: '10px', textAlign: 'center' }}>Criar Conta</h1>
+        <p style={{ 
+          textAlign: 'center', 
+          color: '#666', 
+          marginBottom: '30px' 
+        }}>
+          Entre na Creator Commission Platform
         </p>
-        
-        <form action="/api/shopify/auth" method="get">
-          <input
-            type="text"
-            name="shop"
-            placeholder="your-store.myshopify.com"
-            required
-            style={{
-              padding: '12px',
-              fontSize: '16px',
-              border: '1px solid #ccc',
-              borderRadius: '5px',
-              width: '350px',
-              marginRight: '10px',
-            }}
-          />
+
+        {error && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '20px',
+            backgroundColor: '#f8d7da',
+            border: '1px solid #f5c6cb',
+            borderRadius: '5px',
+            color: '#721c24',
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Eu sou...
+            </label>
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="role"
+                  value="CREATOR"
+                  checked={formData.role === 'CREATOR'}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  style={{ marginRight: '8px' }}
+                />
+                Creator / Influencer
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="role"
+                  value="BRAND"
+                  checked={formData.role === 'BRAND'}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  style={{ marginRight: '8px' }}
+                />
+                Marca / Lojista
+              </label>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="name" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Nome
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '5px',
+              }}
+              placeholder="Seu nome"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="email" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '5px',
+              }}
+              placeholder="seu@email.com"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Senha
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '5px',
+              }}
+              placeholder="Pelo menos 6 caracteres"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Confirmar Senha
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '5px',
+              }}
+              placeholder="Repita sua senha"
+            />
+          </div>
+
           <button
             type="submit"
+            disabled={loading}
             style={{
-              padding: '12px 24px',
+              width: '100%',
+              padding: '12px',
               fontSize: '16px',
               fontWeight: 'bold',
-              backgroundColor: '#5c6ac4',
+              backgroundColor: loading ? '#ccc' : '#28a745',
               color: 'white',
               border: 'none',
               borderRadius: '5px',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            Connect Store
+            {loading ? 'Criando conta...' : 'Criar Conta'}
           </button>
         </form>
-      </div>
 
-      <div style={{
-        border: '1px solid #ccc',
-        padding: '30px',
-        borderRadius: '8px',
-        backgroundColor: '#f8f9fa',
-      }}>
-        <h2>📊 Step 2: Activate Order Tracking</h2>
-        <p style={{ marginBottom: '20px', color: '#666' }}>
-          Register a webhook to track sales and calculate commissions.
-        </p>
-        <button
-          onClick={handleRegisterWebhook}
-          disabled={loading}
-          style={{
-            padding: '12px 24px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            backgroundColor: loading ? '#ccc' : '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {loading ? '⏳ Registering...' : '🔔 Register Webhook'}
-        </button>
+        <div style={{ 
+          marginTop: '20px', 
+          textAlign: 'center',
+          color: '#666',
+        }}>
+          Já tem conta?{' '}
+          <a 
+            href="/auth/signin" 
+            style={{ 
+              color: '#5c6ac4',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+            }}
+          >
+            Entrar
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -23,13 +23,13 @@ export default function Register() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('As senhas não coincidem');
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('A senha deve ter pelo menos 6 caracteres');
       setLoading(false);
       return;
     }
@@ -47,14 +47,14 @@ export default function Register() {
       });
 
       if (response.ok) {
-        alert('✅ Registration successful! Please sign in.');
+        alert('✅ Cadastro realizado com sucesso! Faça login.');
         router.push('/auth/signin');
       } else {
         const text = await response.text();
-        setError(text || 'Registration failed');
+        setError(text || 'Falha no cadastro');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -77,13 +77,13 @@ export default function Register() {
         width: '100%',
         maxWidth: '450px',
       }}>
-        <h1 style={{ marginBottom: '10px', textAlign: 'center' }}>Create Account</h1>
+        <h1 style={{ marginBottom: '10px', textAlign: 'center' }}>Criar Conta</h1>
         <p style={{ 
           textAlign: 'center', 
           color: '#666', 
           marginBottom: '30px' 
         }}>
-          Join the Creator Commission Platform
+          Entre na Creator Commission Platform
         </p>
 
         {error && (
@@ -102,9 +102,9 @@ export default function Register() {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              I am a...
+              Eu sou...
             </label>
-            <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                   type="radio"
@@ -125,14 +125,14 @@ export default function Register() {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   style={{ marginRight: '8px' }}
                 />
-                Brand / Store Owner
+                Marca / Lojista
               </label>
             </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label htmlFor="name" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Name
+              Nome
             </label>
             <input
               id="name"
@@ -147,7 +147,7 @@ export default function Register() {
                 border: '1px solid #ccc',
                 borderRadius: '5px',
               }}
-              placeholder="Your name"
+              placeholder="Seu nome"
             />
           </div>
 
@@ -168,13 +168,13 @@ export default function Register() {
                 border: '1px solid #ccc',
                 borderRadius: '5px',
               }}
-              placeholder="your@email.com"
+              placeholder="seu@email.com"
             />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label htmlFor="password" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Password
+              Senha
             </label>
             <input
               id="password"
@@ -189,13 +189,13 @@ export default function Register() {
                 border: '1px solid #ccc',
                 borderRadius: '5px',
               }}
-              placeholder="At least 6 characters"
+              placeholder="Pelo menos 6 caracteres"
             />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Confirm Password
+              Confirmar Senha
             </label>
             <input
               id="confirmPassword"
@@ -210,7 +210,7 @@ export default function Register() {
                 border: '1px solid #ccc',
                 borderRadius: '5px',
               }}
-              placeholder="Repeat your password"
+              placeholder="Repita sua senha"
             />
           </div>
 
@@ -229,7 +229,7 @@ export default function Register() {
               cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Criando conta...' : 'Criar Conta'}
           </button>
         </form>
 
@@ -238,7 +238,7 @@ export default function Register() {
           textAlign: 'center',
           color: '#666',
         }}>
-          Already have an account?{' '}
+          Já tem conta?{' '}
           <a 
             href="/auth/signin" 
             style={{ 
@@ -247,7 +247,7 @@ export default function Register() {
               fontWeight: 'bold',
             }}
           >
-            Sign In
+            Entrar
           </a>
         </div>
       </div>

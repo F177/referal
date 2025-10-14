@@ -28,13 +28,13 @@ export default function SignIn() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError('Email ou senha inválidos');
       } else {
         router.push(callbackUrl);
         router.refresh();
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export default function SignIn() {
         width: '100%',
         maxWidth: '400px',
       }}>
-        <h1 style={{ marginBottom: '10px', textAlign: 'center' }}>Sign In</h1>
+        <h1 style={{ marginBottom: '10px', textAlign: 'center' }}>Entrar</h1>
         <p style={{ 
           textAlign: 'center', 
           color: '#666', 
@@ -103,7 +103,7 @@ export default function SignIn() {
                 border: '1px solid #ccc',
                 borderRadius: '5px',
               }}
-              placeholder="your@email.com"
+              placeholder="seu@email.com"
             />
           </div>
 
@@ -116,7 +116,7 @@ export default function SignIn() {
                 fontWeight: 'bold',
               }}
             >
-              Password
+              Senha
             </label>
             <input
               id="password"
@@ -150,7 +150,7 @@ export default function SignIn() {
               cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
@@ -159,7 +159,7 @@ export default function SignIn() {
           textAlign: 'center',
           color: '#666',
         }}>
-          Don't have an account?{' '}
+          Não tem conta?{' '}
           <a 
             href="/auth/register" 
             style={{ 
@@ -168,7 +168,7 @@ export default function SignIn() {
               fontWeight: 'bold',
             }}
           >
-            Register
+            Cadastre-se
           </a>
         </div>
       </div>
