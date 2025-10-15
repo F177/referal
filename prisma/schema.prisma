@@ -1,5 +1,4 @@
-// This is your Prisma schema file.
-
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -32,23 +31,23 @@ model User {
   updatedAt   DateTime    @updatedAt
   
   // Relationships
-  brandStore  BrandStore?
-  coupons     CouponMap[]
+  brandStore    BrandStore?
+  coupons       CouponMap[]
   notifications Notification[]
 }
 
 model BrandStore {
-  id             String   @id @default(cuid())
-  platform       String
-  storeUrl       String
-  storeName      String?  // Nome amigável da loja
-  storeDescription String? // Descrição da loja
-  accessToken    String
-  webhookSecret  String
-  brandId        String   @unique
-  brand          User     @relation(fields: [brandId], references: [id])
-  isPublic       Boolean  @default(true) // Aparece no marketplace?
-  createdAt      DateTime @default(now())
+  id               String   @id @default(cuid())
+  platform         String
+  storeUrl         String
+  storeName        String?  // Nome amigável da loja
+  storeDescription String?  // Descrição da loja
+  accessToken      String
+  webhookSecret    String   @default("")
+  brandId          String   @unique
+  brand            User     @relation(fields: [brandId], references: [id])
+  isPublic         Boolean  @default(true) // Aparece no marketplace?
+  createdAt        DateTime @default(now())
   
   // Relationships
   coupons       CouponMap[]
@@ -56,12 +55,12 @@ model BrandStore {
 }
 
 model CouponMap {
-  id            String       @id @default(cuid())
-  couponCode    String       @unique
-  commissionRate Decimal     @default(0.10)
-  status        CouponStatus @default(PENDING)
-  shopifyPriceRuleId String?  // ID do Price Rule no Shopify
-  shopifyDiscountId  String?  // ID do Discount Code no Shopify
+  id                 String       @id @default(cuid())
+  couponCode         String       @unique
+  commissionRate     Decimal      @default(0.10)
+  status             CouponStatus @default(PENDING)
+  shopifyPriceRuleId String?      // ID do Price Rule no Shopify
+  shopifyDiscountId  String?      // ID do Discount Code no Shopify
   
   // Informações do cupom
   discountType  String       @default("PERCENTAGE") // PERCENTAGE ou FIXED_AMOUNT
@@ -84,13 +83,13 @@ model CouponMap {
 }
 
 model Transaction {
-  id              String      @id @default(cuid())
-  orderId         String
-  orderTotal      Decimal
+  id               String      @id @default(cuid())
+  orderId          String
+  orderTotal       Decimal
   commissionAmount Decimal
-  status          String      @default("PENDING")
-  createdAt       DateTime    @default(now())
-  payoutDate      DateTime?
+  status           String      @default("PENDING")
+  createdAt        DateTime    @default(now())
+  payoutDate       DateTime?
   
   couponMapId     String
   coupon          CouponMap   @relation(fields: [couponMapId], references: [id])

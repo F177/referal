@@ -1,4 +1,4 @@
-// src/app/api/brands/list/route.ts
+// src/app/api/creator/stats/brands/list/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -29,6 +29,10 @@ export async function GET() {
             status: {
               in: ['PENDING', 'APPROVED', 'ACTIVE'],
             },
+          },
+          select: {
+            id: true,
+            status: true,
           },
         },
         _count: {
