@@ -83,7 +83,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   
-  debug: true, // Ativa logs para debug
+ debug: true
 };
 
 const handler = NextAuth(authOptions);
