@@ -1,5 +1,4 @@
 // This is your Prisma schema file.
-// Learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -15,28 +14,41 @@ enum UserRole {
   BRAND
 }
 
+enum CouponStatus {
+  PENDING    // Aguardando aprovação da marca
+  APPROVED   // Aprovado, cupom criado no Shopify
+  REJECTED   // Rejeitado pela marca
+  ACTIVE     // Ativo e sendo usado
+  INACTIVE   // Desativado
+}
+
 model User {
   id          String      @id @default(cuid())
   email       String      @unique
   name        String?
-  password    String      // Hashed password
+  password    String
   role        UserRole
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   
   // Relationships
-  brandStore  BrandStore? // A user with role BRAND can have one store
-  coupons     CouponMap[] // A user with role CREATOR can have many coupons
+  brandStore  BrandStore?
+  coupons     CouponMap[]
+  notifications Notification[]
 }
 
 model BrandStore {
   id             String   @id @default(cuid())
-  platform       String   // e.g., "SHOPIFY" or "WOOCOMMERCE"
+  platform       String
   storeUrl       String
-  accessToken    String   // IMPORTANT: Encrypt this value before saving!
-  webhookSecret  String   // IMPORTANT: Encrypt this value as well!
+  storeName      String?  // Nome amigável da loja
+  storeDescription String? // Descrição da loja
+  accessToken    String
+  webhookSecret  String
   brandId        String   @unique
   brand          User     @relation(fields: [brandId], references: [id])
+  isPublic       Boolean  @default(true) // Aparece no marketplace?
+  createdAt      DateTime @default(now())
   
   // Relationships
   coupons       CouponMap[]
@@ -44,31 +56,63 @@ model BrandStore {
 }
 
 model CouponMap {
-  id            String   @id @default(cuid())
-  couponCode    String   @unique
-  commissionRate Decimal  @default(0.10) // e.g., 10%
+  id            String       @id @default(cuid())
+  couponCode    String       @unique
+  commissionRate Decimal     @default(0.10)
+  status        CouponStatus @default(PENDING)
+  shopifyPriceRuleId String?  // ID do Price Rule no Shopify
+  shopifyDiscountId  String?  // ID do Discount Code no Shopify
+  
+  // Informações do cupom
+  discountType  String       @default("PERCENTAGE") // PERCENTAGE ou FIXED_AMOUNT
+  discountValue Decimal      @default(10) // 10% ou R$10
+  usageLimit    Int?         // Limite de usos (null = ilimitado)
+  usageCount    Int          @default(0) // Quantas vezes foi usado
   
   creatorId     String
-  creator       User     @relation(fields: [creatorId], references: [id])
+  creator       User         @relation(fields: [creatorId], references: [id])
   
   brandStoreId  String
-  brandStore    BrandStore @relation(fields: [brandStoreId], references: [id])
+  brandStore    BrandStore   @relation(fields: [brandStoreId], references: [id])
+  
+  createdAt     DateTime     @default(now())
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  expiresAt     DateTime?
   
   transactions  Transaction[]
 }
 
 model Transaction {
   id              String      @id @default(cuid())
-  orderId         String      // The original order ID from the e-commerce platform
-  orderTotal      Decimal     // Total value of the sale
-  commissionAmount Decimal    // Calculated commission for the creator
-  status          String      @default("PENDING") // PENDING -> ELIGIBLE -> PAID
+  orderId         String
+  orderTotal      Decimal
+  commissionAmount Decimal
+  status          String      @default("PENDING")
   createdAt       DateTime    @default(now())
-  payoutDate      DateTime?   // When the payout is scheduled/completed
+  payoutDate      DateTime?
   
   couponMapId     String
-  coupon          CouponMap @relation(fields: [couponMapId], references: [id])
+  coupon          CouponMap   @relation(fields: [couponMapId], references: [id])
   
   brandStoreId    String
-  brandStore      BrandStore @relation(fields: [brandStoreId], references: [id])
+  brandStore      BrandStore  @relation(fields: [brandStoreId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  type      String   // "NEW_SALE", "COUPON_APPROVED", "COUPON_REJECTED", "NEW_REQUEST"
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  
+  // Metadata JSON para dados extras
+  metadata  Json?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, read])
 }
